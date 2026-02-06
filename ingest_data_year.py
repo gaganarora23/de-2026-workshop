@@ -31,7 +31,7 @@ parse_dates = [
 ]
 
 
-def ingest_data(url: str, engine, target_table: str, chunksize: int = 100000, month: int) :
+def ingest_data(url: str, engine, target_table: str, month: int, chunksize: int = 100000):
     
     df_iter = pd.read_csv(
         url,
@@ -76,23 +76,33 @@ def ingest_data(url: str, engine, target_table: str, chunksize: int = 100000, mo
 @click.option('--pg_host', default='localhost', help='PostgreSQL host')
 @click.option('--pg_port', default='5432', help='PostgreSQL port')
 @click.option('--pg_db', default='ny_taxi', help='PostgreSQL database')
-@click.option('--year', type=int, default=2021, help='Year for data')
+@click.option('--year', type=int, default=2020, help='Year for data')
 @click.option('--chunksize', type=int, default=100000, help='Chunk size for ingestion')
 @click.option('--target_table', default='yellow_taxi_data', help='Target table name')
 def main(pg_user, pg_pass, pg_host, pg_port, pg_db, year, chunksize, target_table):
     engine = create_engine(f'postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
     url_prefix = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow'
 
+    print(f'Starting ingestion for year {year}')
+    print(f'Table will be created in January and data will be appended for remaining months')
+    
     for month in range(1, 13):
         url = f'{url_prefix}/yellow_tripdata_{year:04d}-{month:02d}.csv.gz'
-        print(f'Ingesting data for {year}-{month:02d} from {url}')
+        print(f'\nIngesting data for {year}-{month:02d} from {url}')
         ingest_data(
             url=url,
             engine=engine,
             target_table=target_table,
-            chunksize=chunksize,
-            month=month
+            month=month,
+            chunksize=chunksize
         )
+    
+    print(f'\n✓ Successfully ingested all 12 months of {year} data')
 
 if __name__ == '__main__':
     main()
+
+
+# Yellow taxi data for 2020 has 24,648,499 rows.
+# SELECT COUNT(*) FROM public."yellow_taxi_data-2020-1";
+# -- 24,648,499
